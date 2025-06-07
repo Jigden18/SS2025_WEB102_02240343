@@ -1,183 +1,209 @@
-# TikTok Clone - Modern Web App with Infinite Scroll & Supabase Cloud Storage
+Here’s a professional `README.md` combining all key steps and concepts from the three practicals you uploaded:
 
-This project is a simplified TikTok-style web application built using modern full-stack technologies. It includes functionality for user authentication, video uploading, infinite scrolling, and cloud-based file storage.
+---
 
+# TikTok Clone – Full Stack Implementation Guide
 
-## Practical Coverage
+This repository contains the complete backend and frontend setup for a TikTok-style application. It includes RESTful API design, PostgreSQL database integration with Prisma ORM, and cloud storage integration using Supabase.
 
-- **Practical 1: Project Setup with Next.js and App Router**
-- **Practical 4: Infinite Scrolling with TanStack Query**
-- **Practical 5: Cloud Bucket Storage with Supabase**
+---
 
+## Practical Breakdown
 
-## Practical 1: Initial Project Setup (Next.js 13 + App Router)
+### Practical 2: REST API Design & Implementation
 
-### Tools & Technologies
+We build a RESTful backend using **Express.js** to power the TikTok clone’s main functionalities.
 
-- **Frontend:** React (Next.js 13 with App Router)
-- **Backend:** Node.js, Express, Prisma ORM, PostgreSQL
-- **Other:** Tailwind CSS, Supabase, TanStack Query (React Query)
+#### API Resources:
 
-### Key Setup Steps
+* Videos
+* Users
+* Comments
 
-1. Created Next.js 13 project using the `app` directory structure.
-2. Implemented routing with `layout.jsx`, `page.jsx`, and dynamic routes.
-3. Set up shared components like `Navbar`, `Sidebar`, and `VideoCard`.
-4. Backend API endpoints for video upload, list, and delete were created with Express.
-5. Environment variables were configured in `.env.local` and `.env`.
+#### Endpoints Structure:
 
+| Endpoint                   | GET              | POST             | PUT      | DELETE     |
+| -------------------------- | ---------------- | ---------------- | -------- | ---------- |
+| `/api/videos`              | ✔ Get all videos | ✔ Create video   | -        | -          |
+| `/api/videos/:id`          | ✔ Get by ID      | -                | ✔ Update | ✔ Delete   |
+| `/api/videos/:id/comments` | ✔                | -                | -        | -          |
+| `/api/users`               | ✔ Get all users  | ✔ Create user    | -        | -          |
+| `/api/users/:id`           | ✔ Get by ID      | -                | ✔ Update | ✔ Delete   |
+| `/api/users/:id/videos`    | ✔                | -                | -        | -          |
+| `/api/users/:id/followers` | ✔                | ✔ Follow         | -        | ✔ Unfollow |
+| `/api/comments`            | ✔                | ✔ Create comment | -        | -          |
+| `/api/comments/:id`        | ✔                | -                | ✔ Update | ✔ Delete   |
 
+#### Setup Instructions:
 
-## Practical 4: Implementing Infinite Scroll with TanStack Query
-
-### Problem
-
-Fetching all videos at once leads to performance bottlenecks. Users should be able to scroll continuously to fetch more content without page reloads.
-
-### Solution
-
-- Implemented **cursor-based pagination** in the backend API (`GET /videos?cursor=...`).
-- Used **TanStack Query's `useInfiniteQuery()`** to fetch and manage paginated video data.
-- Added an **Intersection Observer** to detect when the user reaches the bottom and load more videos.
-- Ensured duplicate video entries are avoided and scrolling is smooth and responsive.
-
-### Backend Update
-
-```js
-// Example controller logic (videoController.js)
-const getPaginatedVideos = async (req, res) => {
-  const { cursor } = req.query;
-  const videos = await prisma.video.findMany({
-    take: 10,
-    skip: cursor ? 1 : 0,
-    ...(cursor && { cursor: { id: parseInt(cursor) } }),
-    orderBy: { id: 'desc' },
-  });
-  res.json(videos);
-};
-````
-
-
-## Practical 5: Migrating to Supabase Cloud Storage
-
-### Limitations of Local Storage
-
-* Limited disk space
-* No scalability across multiple servers
-* File loss on redeployment
-* No CDN or automatic backup
-
-### Why Cloud Storage (Supabase)
-
-* Virtually **unlimited storage**
-* **Global CDN** for fast file delivery
-* **Redundancy** and **backup**
-* Fine-grained **access control**
-* Direct browser-to-cloud uploads reduce server load
-
-### Supabase Setup
-
-1. Created a Supabase project.
-2. Created two **storage buckets**: `videos` (public) and `thumbnails` (public).
-3. Configured **RLS policies**:
-
-   * Upload: `authenticated` users can upload
-   * Access: `anon` and `authenticated` users can `SELECT`
-
-### Backend Integration
-
-* Installed `@supabase/supabase-js` in the backend.
-* Configured Supabase client in `src/lib/supabase.js`.
-* Updated `videoController.js`:
-
-  * Upload: Direct upload to Supabase bucket.
-  * Delete: Remove files from Supabase before deleting metadata.
-
-```js
-const supabase = require('../lib/supabase');
-
-const uploadToSupabase = async (file, bucket) => {
-  const filePath = `${Date.now()}_${file.originalname}`;
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .upload(filePath, file.buffer, { contentType: file.mimetype });
-
-  return { path: filePath, url: `${process.env.SUPABASE_STORAGE_URL}/${bucket}/${filePath}` };
-};
+```bash
+mkdir server && cd server
+npm init -y
+npm install express cors morgan body-parser dotenv
+npm install --save-dev nodemon
 ```
 
-* Updated Prisma schema to store Supabase file paths:
+**Structure:**
 
-```prisma
-videoStoragePath String? @map("video_storage_path")
-thumbnailStoragePath String? @map("thumbnail_storage_path")
+```
+src/
+  controllers/
+  routes/
+  models/
+  middleware/
+  utils/
+.env
+app.js
+server.js
 ```
 
-### Frontend Integration
+Use Postman or curl to test routes.
 
-* Installed `@supabase/supabase-js` in frontend.
-* Added `lib/supabase.js` for browser-based access.
-* Modified `uploadService.js` and `page.jsx` to directly upload files to Supabase.
-* Updated `VideoCard.jsx` to handle Supabase URLs properly.
+---
+
+### Practical 4: Connecting to PostgreSQL with Prisma ORM
+
+We transition from in-memory models to a real PostgreSQL database using Prisma.
+
+#### Key Tasks:
+
+* Setup PostgreSQL database: `tiktok_db`
+* Create and configure `.env`:
+
+```env
+DATABASE_URL="postgresql://tiktok_user:your_password@localhost:5432/tiktok_db?schema=public"
+```
+
+#### Prisma Setup:
+
+```bash
+npm install @prisma/client
+npm install prisma --save-dev
+npx prisma init
+```
+
+Define your schema in `prisma/schema.prisma`, then run:
+
+```bash
+npx prisma migrate dev --name init
+```
+
+#### Authentication:
+
+* Password hashing: `bcrypt`
+* Token-based auth: `jsonwebtoken`
+* Middleware to protect routes
+
+#### Seeder Script:
+
+Populate your DB with test data:
+
+```bash
+npm install bcrypt
+npm run seed
+```
+
+---
+
+### Practical 5: Cloud Storage Integration with Supabase
+
+We enhance the video upload system by migrating to Supabase Storage.
+
+#### Supabase Setup:
+
+1. Create a Supabase project
+2. Create public buckets:
+
+   * `videos`
+   * `thumbnails`
+3. Set access policies:
+
+   * Authenticated users can upload
+   * Public can view
+
+#### Backend:
+
+```bash
+npm install @supabase/supabase-js
+```
+
+Create `src/lib/supabase.js` and add:
 
 ```js
-// src/lib/supabase.js
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+module.exports = supabase;
+```
+
+Update `videoController.js` to upload and delete videos via Supabase. Also, extend your Prisma model to store Supabase paths.
+
+#### Frontend (Next.js):
+
+```bash
+npm install @supabase/supabase-js
+```
+
+In `src/lib/supabase.js`:
+
+```js
 import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_KEY
-);
-
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_KEY);
 export default supabase;
 ```
 
+Update:
 
-## Folder Structure (Frontend)
+* `uploadService.js` to handle direct uploads
+* `upload/page.jsx` and `VideoCard.jsx` for rendering via Supabase URLs
 
-```
-/app
-  /upload
-    page.jsx         # Upload page
-/components/ui
-  VideoCard.jsx      # Renders video with Supabase URL
-/lib
-  supabase.js        # Supabase client config
-/services
-  uploadService.js   # Upload logic to Supabase
-```
+---
 
+## Testing & Deployment
 
-## Testing & Deployment Checklist
+* Use Postman to test API endpoints and auth
+* Run migration script to move local files to Supabase
 
-* Ran migration script to transfer local files to Supabase.
-* Verified videos load correctly from CDN URLs.
-* Removed local `uploads/` directory usage.
-* Environment variables securely added in `.env` and `.env.local`.
-
-
-## Environment Variables
-
-**Backend (.env):**
-
-```
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-key
-SUPABASE_STORAGE_URL=https://your-project.supabase.co/storage/v1
+```bash
+node scripts/migrateVideosToSupabase.js
 ```
 
-**Frontend (.env.local):**
+* Clean up local storage after verifying Supabase links
+
+---
+
+## Folder Structure Overview
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLIC_KEY=your-public-key
+tiktok-clone/
+  ├── server/
+  │   ├── src/
+  │   │   ├── controllers/
+  │   │   ├── routes/
+  │   │   ├── middleware/
+  │   │   ├── lib/
+  │   │   └── services/
+  │   ├── prisma/
+  │   ├── .env
+  │   └── package.json
+  ├── tiktok-frontend/
+  │   ├── src/
+  │   │   ├── app/
+  │   │   ├── components/
+  │   │   ├── lib/
+  │   │   └── services/
+  │   ├── .env.local
+  │   └── package.json
 ```
 
+---
 
-## Resources
+## References
 
-* [Supabase Storage Docs](https://supabase.com/docs/guides/storage)
-* [TanStack Query](https://tanstack.com/query)
-* [Prisma ORM](https://www.prisma.io/)
-* [Next.js App Router](https://nextjs.org/docs/app/building-your-application/routing)
+* [Supabase Docs](https://supabase.com/docs)
+* [Prisma Docs](https://www.prisma.io/docs)
+* [JWT Authentication](https://jwt.io/introduction)
+* [Content Delivery Networks](https://www.cloudflare.com/learning/cdn/what-is-a-cdn/)
 
+---
+
+Let me know if you’d like this split into separate READMEs for frontend and backend, or want a `Reflection.md` file too!
